@@ -76,6 +76,23 @@ class FlutterAccessibilityService {
     }
   }
 
+  /// performClick
+  static Future<bool> performClick(int posX, int posY) async {
+    try {
+      return await _methodChannel.invokeMethod<bool?>(
+        'performClick',
+        {
+          "posX": posX,
+          "posY": posY,
+        },
+      ) ??
+          false;
+    } on PlatformException catch (error) {
+      log("$error");
+      return false;
+    }
+  }
+
   /// Show an overlay window of `TYPE_ACCESSIBILITY_OVERLAY`
   ///
   /// Dont forget to add the overlay entrypoint in the main level.

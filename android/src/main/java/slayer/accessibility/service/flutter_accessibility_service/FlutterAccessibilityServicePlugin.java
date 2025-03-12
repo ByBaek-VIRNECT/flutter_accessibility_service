@@ -120,7 +120,49 @@ public class FlutterAccessibilityServicePlugin implements FlutterPlugin, Activit
             } else {
                 result.success(false);
             }
+        } else if (call.method.equals("performClick")) {
+            int posX = call.argument("posX");
+            int posY = call.argument("posY");
+
+            Log.d(TAG, "simulateClick(posX:" + posX + ", posY:" + posY + ")");
+
+            if (posX < 0 || posY < 0) {
+                Log.e(TAG, "simulateClick invalid position(posX:" + posX + ", posY:" + posY + ")");
+                result.success(false);
+                return;
+            }
+
+            GestureDescription.Builder gestureBuilder = new GestureDescription.Builder();
+            Path clickPath = new Path();
+            clickPath.moveTo((float) posX, (float) posY);
+
+            GestureDescription.StrokeDescription clickStroke = new GestureDescription.StrokeDescription(
+                    clickPath, 0L, 10L
+            );
+            gestureBuilder.addStroke(clickStroke);
+
+            boolean dispatchResult = dispatchGesture(gestureBuilder.build(), new GestureResultCallback() {
+                @Override
+                public void onCompleted(GestureDescription gesture) {
+                    super.onCompleted(gesture);
+                    Log.d(TAG, "Click gesture completed");
+                    result.success(true);
+                }
+
+                @Override
+                public void onCancelled(GestureDescription gesture) {
+                    super.onCancelled(gesture);
+                    Log.d(TAG, "Click gesture cancelled");
+                    result.success(false);
+                }
+            }, null);
+
+            Log.d(TAG, "MainActivity.result = " + dispatchResult);
+            if (!dispatchResult) {
+                result.success(false);
+            }
         }
+    }
      /*   else if (call.method.equals("performActionByText")) {
             String text = call.argument("text");
             Integer action = (Integer) call.argument("nodeAction");
@@ -146,104 +188,112 @@ public class FlutterAccessibilityServicePlugin implements FlutterPlugin, Activit
                 result.success(false);
             }
         } */
-        else if (call.method.equals("showOverlayWindow")) {
-            if (!supportOverlay) {
-                result.error("ERR:OVERLAY", "Add the overlay entry point to be able of using it", null);
-                return;
-            }
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP_MR1) {
-                AccessibilityListener.showOverlay();
-                result.success(true);
-            } else {
-                result.success(false);
-            }
-        } else if (call.method.equals("hideOverlayWindow")) {
-            AccessibilityListener.removeOverlay();
+        else if(call.method.equals("showOverlayWindow"))
+
+    {
+        if (!supportOverlay) {
+            result.error("ERR:OVERLAY", "Add the overlay entry point to be able of using it", null);
+            return;
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP_MR1) {
+            AccessibilityListener.showOverlay();
             result.success(true);
         } else {
-            result.notImplemented();
+            result.success(false);
         }
+    } else if(call.method.equals("hideOverlayWindow"))
+
+    {
+        AccessibilityListener.removeOverlay();
+        result.success(true);
+    } else
+
+    {
+        result.notImplemented();
     }
+}
 
-    @Override
-    public void onDetachedFromEngine(@NonNull FlutterPluginBinding binding) {
-        channel.setMethodCallHandler(null);
-        eventChannel.setStreamHandler(null);
-        context.unregisterReceiver(actionsReceiver);
-    }
-    @SuppressLint("WrongConstant")
-    @Override
-    public void onListen(Object arguments, EventChannel.EventSink events) {
-        if (Utils.isAccessibilitySettingsOn(context)) {
-            /// Set up receiver
-            IntentFilter intentFilter = new IntentFilter();
-            intentFilter.addAction(ACCESSIBILITY_INTENT);
 
-            accessibilityReceiver = new AccessibilityReceiver(events);
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                context.registerReceiver(accessibilityReceiver, intentFilter, Context.RECEIVER_EXPORTED);
-            }else{
-                context.registerReceiver(accessibilityReceiver, intentFilter);
-            }
+@Override
+public void onDetachedFromEngine(@NonNull FlutterPluginBinding binding) {
+    channel.setMethodCallHandler(null);
+    eventChannel.setStreamHandler(null);
+    context.unregisterReceiver(actionsReceiver);
+}
 
-            /// Set up listener intent
-            Intent listenerIntent = new Intent(context, AccessibilityListener.class);
-            context.startService(listenerIntent);
-            Log.i("AccessibilityPlugin", "Started the accessibility tracking service.");
+@SuppressLint("WrongConstant")
+@Override
+public void onListen(Object arguments, EventChannel.EventSink events) {
+    if (Utils.isAccessibilitySettingsOn(context)) {
+        /// Set up receiver
+        IntentFilter intentFilter = new IntentFilter();
+        intentFilter.addAction(ACCESSIBILITY_INTENT);
+
+        accessibilityReceiver = new AccessibilityReceiver(events);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            context.registerReceiver(accessibilityReceiver, intentFilter, Context.RECEIVER_EXPORTED);
+        } else {
+            context.registerReceiver(accessibilityReceiver, intentFilter);
         }
-    }
 
-    @Override
-    public void onCancel(Object arguments) {
-        context.unregisterReceiver(accessibilityReceiver);
-        accessibilityReceiver = null;
+        /// Set up listener intent
+        Intent listenerIntent = new Intent(context, AccessibilityListener.class);
+        context.startService(listenerIntent);
+        Log.i("AccessibilityPlugin", "Started the accessibility tracking service.");
     }
+}
 
-    @Override
-    public boolean onActivityResult(int requestCode, int resultCode, Intent data) {
-        if (requestCode == REQUEST_CODE_FOR_ACCESSIBILITY) {
-            if (resultCode == Activity.RESULT_OK) {
-                pendingResult.success(true);
-            } else if (resultCode == Activity.RESULT_CANCELED) {
-                pendingResult.success(Utils.isAccessibilitySettingsOn(context));
-            } else {
-                pendingResult.success(false);
-            }
-            return true;
+@Override
+public void onCancel(Object arguments) {
+    context.unregisterReceiver(accessibilityReceiver);
+    accessibilityReceiver = null;
+}
+
+@Override
+public boolean onActivityResult(int requestCode, int resultCode, Intent data) {
+    if (requestCode == REQUEST_CODE_FOR_ACCESSIBILITY) {
+        if (resultCode == Activity.RESULT_OK) {
+            pendingResult.success(true);
+        } else if (resultCode == Activity.RESULT_CANCELED) {
+            pendingResult.success(Utils.isAccessibilitySettingsOn(context));
+        } else {
+            pendingResult.success(false);
         }
-        return false;
+        return true;
     }
+    return false;
+}
 
-    @Override
-    public void onAttachedToActivity(@NonNull ActivityPluginBinding binding) {
-        this.mActivity = binding.getActivity();
-        binding.addActivityResultListener(this);
-        try {
-            FlutterEngineGroup enn = new FlutterEngineGroup(context);
-            DartExecutor.DartEntrypoint dEntry = new DartExecutor.DartEntrypoint(
-                    FlutterInjector.instance().flutterLoader().findAppBundlePath(),
-                    "accessibilityOverlay");
-            FlutterEngine engine = enn.createAndRunEngine(context, dEntry);
-            FlutterEngineCache.getInstance().put(CACHED_TAG, engine);
-            supportOverlay = true;
-        } catch (Exception exception) {
-            supportOverlay = false;
-            Log.e("ENGINE-ERROR", "onAttachedToActivity: " + exception.getMessage());
-        }
+@Override
+public void onAttachedToActivity(@NonNull ActivityPluginBinding binding) {
+    this.mActivity = binding.getActivity();
+    binding.addActivityResultListener(this);
+    try {
+        FlutterEngineGroup enn = new FlutterEngineGroup(context);
+        DartExecutor.DartEntrypoint dEntry = new DartExecutor.DartEntrypoint(
+                FlutterInjector.instance().flutterLoader().findAppBundlePath(),
+                "accessibilityOverlay");
+        FlutterEngine engine = enn.createAndRunEngine(context, dEntry);
+        FlutterEngineCache.getInstance().put(CACHED_TAG, engine);
+        supportOverlay = true;
+    } catch (Exception exception) {
+        supportOverlay = false;
+        Log.e("ENGINE-ERROR", "onAttachedToActivity: " + exception.getMessage());
     }
+}
 
-    @Override
-    public void onDetachedFromActivityForConfigChanges() {
-        this.mActivity = null;
-    }
+@Override
+public void onDetachedFromActivityForConfigChanges() {
+    this.mActivity = null;
+}
 
-    @Override
-    public void onReattachedToActivityForConfigChanges(@NonNull ActivityPluginBinding binding) {
-        onAttachedToActivity(binding);
-    }
+@Override
+public void onReattachedToActivityForConfigChanges(@NonNull ActivityPluginBinding binding) {
+    onAttachedToActivity(binding);
+}
 
-    @Override
-    public void onDetachedFromActivity() {
-        this.mActivity = null;
-    }
+@Override
+public void onDetachedFromActivity() {
+    this.mActivity = null;
+}
 }
