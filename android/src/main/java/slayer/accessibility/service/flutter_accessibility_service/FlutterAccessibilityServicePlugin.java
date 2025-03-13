@@ -14,6 +14,7 @@ import android.os.Bundle;
 import android.provider.Settings;
 import android.util.Log;
 import android.view.accessibility.AccessibilityNodeInfo;
+
 import java.util.HashMap;
 
 import androidx.annotation.NonNull;
@@ -59,6 +60,9 @@ public class FlutterAccessibilityServicePlugin implements FlutterPlugin, Activit
     HashMap<Integer, Result> pendingClickResultMap = new HashMap<>();
     final int REQUEST_CODE_FOR_ACCESSIBILITY = 167;
 
+    private boolean isActionsReceiverRegistered = false;
+    private boolean isClickActionReceiverRegistered = false;
+
     @Override
     public void onAttachedToEngine(@NonNull FlutterPluginBinding flutterPluginBinding) {
         context = flutterPluginBinding.getApplicationContext();
@@ -101,8 +105,16 @@ public class FlutterAccessibilityServicePlugin implements FlutterPlugin, Activit
             mActivity.startActivityForResult(intent, REQUEST_CODE_FOR_ACCESSIBILITY);
         } else if (call.method.equals("getSystemActions")) {
             if (Utils.isAccessibilitySettingsOn(context)) {
-                IntentFilter filter = new IntentFilter(BROD_SYSTEM_GLOBAL_ACTIONS);
-                context.registerReceiver(actionsReceiver, filter);
+                if (!isActionsReceiverRegistered) {
+                    try {
+                        isActionsReceiverRegistered = true;
+                        IntentFilter filter = new IntentFilter(BROD_SYSTEM_GLOBAL_ACTIONS);
+                        context.registerReceiver(actionsReceiver, filter);
+                    } catch (Exception exception) {
+                        isActionsReceiverRegistered = false;
+                        Log.e("ENGINE-ERROR", "getSystemActions: " + exception.getMessage());
+                    }
+                }
                 Intent intent = new Intent(context, AccessibilityListener.class);
                 intent.putExtra(INTENT_SYSTEM_GLOBAL_ACTIONS, true);
                 context.startService(intent);
@@ -149,10 +161,18 @@ public class FlutterAccessibilityServicePlugin implements FlutterPlugin, Activit
             }
 
             if (Utils.isAccessibilitySettingsOn(context)) {
-                IntentFilter filter = new IntentFilter(BROD_SYSTEM_GLOBAL_ACTIONS);
-                context.registerReceiver(clickActionReceiver, filter);
+                if (!isClickActionReceiverRegistered) {
+                    try {
+                        isClickActionReceiverRegistered = true;
+                        IntentFilter filter = new IntentFilter(BROD_SYSTEM_GLOBAL_ACTIONS);
+                        context.registerReceiver(clickActionReceiver, filter);
+                    } catch (Exception exception) {
+                        isClickActionReceiverRegistered = false;
+                        Log.e("ENGINE-ERROR", "performClick: " + exception.getMessage());
+                    }
+                }
                 final Intent i = new Intent(context, AccessibilityListener.class);
-                int clickId = pendingClickResultMap.size()+1;
+                int clickId = pendingClickResultMap.size() + 1;
                 i.putExtra(INTENT_CLICK_ACTION, true);
                 i.putExtra(INTENT_CLICK_ID, clickId);
                 i.putExtra(INTENT_CLICK_POSITION_X, posX);
@@ -207,13 +227,20 @@ public class FlutterAccessibilityServicePlugin implements FlutterPlugin, Activit
         }
     }
 
-
     @Override
     public void onDetachedFromEngine(@NonNull FlutterPluginBinding binding) {
-        channel.setMethodCallHandler(null);
-        eventChannel.setStreamHandler(null);
-        context.unregisterReceiver(actionsReceiver);
-        context.unregisterReceiver(clickActionReceiver);
+        try {
+            channel.setMethodCallHandler(null);
+            eventChannel.setStreamHandler(null);
+            if (isActionsReceiverRegistered) {
+                context.unregisterReceiver(actionsReceiver);
+            }
+            if (isClickActionReceiverRegistered) {
+                context.unregisterReceiver(clickActionReceiver);
+            }
+        } catch (Exception exception) {
+            Log.e("ENGINE-ERROR", "onDetachedFromEngine: " + exception.getMessage());
+        }
     }
 
     @SuppressLint("WrongConstant")
