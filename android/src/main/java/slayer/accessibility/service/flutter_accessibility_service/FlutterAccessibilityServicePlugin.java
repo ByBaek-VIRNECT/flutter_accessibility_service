@@ -14,6 +14,7 @@ import android.os.Bundle;
 import android.provider.Settings;
 import android.util.Log;
 import android.view.accessibility.AccessibilityNodeInfo;
+import java.util.HashMap;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
@@ -55,6 +56,7 @@ public class FlutterAccessibilityServicePlugin implements FlutterPlugin, Activit
     private boolean supportOverlay = false;
 
     private Result pendingResult;
+    HashMap<Integer, Result> pendingClickResultMap = new HashMap<>();
     final int REQUEST_CODE_FOR_ACCESSIBILITY = 167;
 
     @Override
@@ -71,6 +73,20 @@ public class FlutterAccessibilityServicePlugin implements FlutterPlugin, Activit
         public void onReceive(Context context, Intent intent) {
             List<Integer> actions = intent.getIntegerArrayListExtra("actions");
             pendingResult.success(actions);
+        }
+    };
+
+    private BroadcastReceiver clickActionReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if (intent.hasExtra(INTENT_CLICK_RESULT)) {
+                boolean clickResult = intent.getBooleanExtra(INTENT_CLICK_RESULT, false);
+                int clickId = intent.getIntExtra(INTENT_CLICK_ID, 0);
+                Result pendingClickResult = pendingClickResultMap.get(clickId);
+                if (pendingClickResult != null) {
+                    pendingClickResult.success(clickResult);
+                }
+            }
         }
     };
 
@@ -121,44 +137,29 @@ public class FlutterAccessibilityServicePlugin implements FlutterPlugin, Activit
                 result.success(false);
             }
         } else if (call.method.equals("performClick")) {
-            int posX = call.argument("posX");
-            int posY = call.argument("posY");
+            int posX = call.argument(INTENT_CLICK_POSITION_X);
+            int posY = call.argument(INTENT_CLICK_POSITION_Y);
 
-            Log.d(TAG, "simulateClick(posX:" + posX + ", posY:" + posY + ")");
+            Log.d("FlutterAccessibilityServicePlugin", "performClick(posX:" + posX + ", posY:" + posY + ")");
 
             if (posX < 0 || posY < 0) {
-                Log.e(TAG, "simulateClick invalid position(posX:" + posX + ", posY:" + posY + ")");
+                Log.e("FlutterAccessibilityServicePlugin", "simulateClick invalid position(posX:" + posX + ", posY:" + posY + ")");
                 result.success(false);
                 return;
             }
 
-            GestureDescription.Builder gestureBuilder = new GestureDescription.Builder();
-            Path clickPath = new Path();
-            clickPath.moveTo((float) posX, (float) posY);
-
-            GestureDescription.StrokeDescription clickStroke = new GestureDescription.StrokeDescription(
-                    clickPath, 0L, 10L
-            );
-            gestureBuilder.addStroke(clickStroke);
-
-            boolean dispatchResult = dispatchGesture(gestureBuilder.build(), new GestureResultCallback() {
-                @Override
-                public void onCompleted(GestureDescription gesture) {
-                    super.onCompleted(gesture);
-                    Log.d(TAG, "Click gesture completed");
-                    result.success(true);
-                }
-
-                @Override
-                public void onCancelled(GestureDescription gesture) {
-                    super.onCancelled(gesture);
-                    Log.d(TAG, "Click gesture cancelled");
-                    result.success(false);
-                }
-            }, null);
-
-            Log.d(TAG, "MainActivity.result = " + dispatchResult);
-            if (!dispatchResult) {
+            if (Utils.isAccessibilitySettingsOn(context)) {
+                IntentFilter filter = new IntentFilter(BROD_SYSTEM_GLOBAL_ACTIONS);
+                context.registerReceiver(clickActionReceiver, filter);
+                final Intent i = new Intent(context, AccessibilityListener.class);
+                int clickId = pendingClickResultMap.size()+1;
+                i.putExtra(INTENT_CLICK_ACTION, true);
+                i.putExtra(INTENT_CLICK_ID, clickId);
+                i.putExtra(INTENT_CLICK_POSITION_X, posX);
+                i.putExtra(INTENT_CLICK_POSITION_Y, posY);
+                context.startService(i);
+                pendingClickResultMap.put(clickId, result);
+            } else {
                 result.success(false);
             }
         }
@@ -212,6 +213,7 @@ public class FlutterAccessibilityServicePlugin implements FlutterPlugin, Activit
         channel.setMethodCallHandler(null);
         eventChannel.setStreamHandler(null);
         context.unregisterReceiver(actionsReceiver);
+        context.unregisterReceiver(clickActionReceiver);
     }
 
     @SuppressLint("WrongConstant")

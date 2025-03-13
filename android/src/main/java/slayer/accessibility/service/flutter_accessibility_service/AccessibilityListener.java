@@ -4,6 +4,8 @@ import static slayer.accessibility.service.flutter_accessibility_service.Constan
 import static slayer.accessibility.service.flutter_accessibility_service.FlutterAccessibilityServicePlugin.CACHED_TAG;
 
 import android.accessibilityservice.AccessibilityService;
+import android.accessibilityservice.GestureDescription;
+import android.graphics.Path;
 import android.annotation.TargetApi;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -121,15 +123,65 @@ public class AccessibilityListener extends AccessibilityService {
     public int onStartCommand(Intent intent, int flags, int startId) {
         boolean globalAction = intent.getBooleanExtra(INTENT_GLOBAL_ACTION, false);
         boolean systemActions = intent.getBooleanExtra(INTENT_SYSTEM_GLOBAL_ACTIONS, false);
+        boolean clickAction = intent.getBooleanExtra(INTENT_CLICK_ACTION, false);
         if (systemActions && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+            Log.d("AccessibilityListener", "systemActions");
             List<Integer> actions = getSystemActions().stream().map(AccessibilityNodeInfo.AccessibilityAction::getId).collect(Collectors.toList());
             Intent broadcastIntent = new Intent(BROD_SYSTEM_GLOBAL_ACTIONS);
             broadcastIntent.putIntegerArrayListExtra("actions", new ArrayList<>(actions));
             sendBroadcast(broadcastIntent);
         }
         if (globalAction) {
+            Log.d("AccessibilityListener", "globalAction");
             int actionId = intent.getIntExtra(INTENT_GLOBAL_ACTION_ID, 8);
             performGlobalAction(actionId);
+        }
+
+
+        if (clickAction) {
+            Log.d("AccessibilityListener", "clickAction");
+            int posX = intent.getIntExtra(INTENT_CLICK_POSITION_X, 0);
+            int posY = intent.getIntExtra(INTENT_CLICK_POSITION_Y, 0);
+            int clickId = intent.getIntExtra(INTENT_CLICK_ID, 0);
+
+            GestureDescription.Builder gestureBuilder = new GestureDescription.Builder();
+            Path clickPath = new Path();
+            clickPath.moveTo((float) posX, (float) posY);
+
+            GestureDescription.StrokeDescription clickStroke = new GestureDescription.StrokeDescription(
+                    clickPath, 0L, 10L
+            );
+            gestureBuilder.addStroke(clickStroke);
+
+            boolean dispatchResult = dispatchGesture(gestureBuilder.build(), new GestureResultCallback() {
+                @Override
+                public void onCompleted(GestureDescription gesture) {
+                    super.onCompleted(gesture);
+                    Log.d("AccessibilityListener", "Click gesture onCompleted");
+                    Intent broadcastIntent = new Intent(BROD_CLICK_ACTION_RESULT);
+                    broadcastIntent.putExtra(INTENT_CLICK_RESULT, true);
+                    broadcastIntent.putExtra(INTENT_CLICK_ID, clickId);
+                    sendBroadcast(broadcastIntent);
+                }
+
+                @Override
+                public void onCancelled(GestureDescription gesture) {
+                    super.onCompleted(gesture);
+                    Log.d("AccessibilityListener", "Click gesture cancelled");
+                    Intent broadcastIntent = new Intent(BROD_CLICK_ACTION_RESULT);
+                    broadcastIntent.putExtra(INTENT_CLICK_RESULT, false);
+                    broadcastIntent.putExtra(INTENT_CLICK_ID, clickId);
+                    sendBroadcast(broadcastIntent);
+                }
+            }, null);
+            Log.d("AccessibilityListener", "dispatchResult = " + dispatchResult);
+
+            if (!dispatchResult) {
+                Intent broadcastIntent = new Intent(BROD_CLICK_ACTION_RESULT);
+                broadcastIntent.putExtra("clickResult", false);
+                broadcastIntent.putExtra(INTENT_CLICK_ID, clickId);
+                sendBroadcast(broadcastIntent);
+            }
         }
         Log.d("CMD_STARTED", "onStartCommand: " + startId);
         return START_STICKY;

@@ -203,6 +203,15 @@ class _MyAppState extends State<MyApp> {
                       },
                       child: const Text("List GlobalActions"),
                     ),
+                    TextButton(
+                      onPressed: () async {
+                        final clickResult =
+                            await FlutterAccessibilityService.performClick(
+                                500, 500);
+                        log("clickResult = $clickResult");
+                      },
+                      child: const Text("Perform Click"),
+                    ),
                   ],
                 ),
               ),
