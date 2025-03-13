@@ -242,18 +242,23 @@ public class AccessibilityListener extends AccessibilityService {
     @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP_MR1)
     @Override
     protected void onServiceConnected() {
-        mWindowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
-        mOverlayView = new FlutterView(getApplicationContext(), new FlutterTextureView(getApplicationContext()));
-        mOverlayView.attachToFlutterEngine(FlutterEngineCache.getInstance().get(CACHED_TAG));
-        mOverlayView.setFitsSystemWindows(true);
-        mOverlayView.setFocusable(true);
-        mOverlayView.setFocusableInTouchMode(true);
-        mOverlayView.setBackgroundColor(Color.TRANSPARENT);
+
     }
 
     @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP_MR1)
     static public void showOverlay() {
         if (!isOverlayShown) {
+            if (mWindowManager == null) {
+                mWindowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
+            }
+            if (mOverlayView == null) {
+                mOverlayView = new FlutterView(getApplicationContext(), new FlutterTextureView(getApplicationContext()));
+                mOverlayView.attachToFlutterEngine(FlutterEngineCache.getInstance().get(CACHED_TAG));
+                mOverlayView.setFitsSystemWindows(true);
+                mOverlayView.setFocusable(true);
+                mOverlayView.setFocusableInTouchMode(true);
+                mOverlayView.setBackgroundColor(Color.TRANSPARENT);
+            }
             WindowManager.LayoutParams lp = new WindowManager.LayoutParams();
             lp.type = WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY;
             lp.format = PixelFormat.TRANSLUCENT;
