@@ -148,33 +148,24 @@ public class AccessibilityListener extends AccessibilityService {
                 direction = "left";
             }
 
-            int pX = 0;
-            int pY = 0;
+            float pX = 0f;
+            float pY = 0f;
 
-            float x1 = 500f;
-            float x2 = 500f;
-            float y1 = 500f;
-            float y2 = 500f;
 
-            int mouseSensitivity = 250; // The higher this value, the further the swipe distance
-            float sensitivity = 400f; // The lower this value, the further the swipe distance
+            float distance = 250f; // The higher this value, the further the swipe distance
 
             if (direction == "left") {
-                pX = mouseSensitivity;
-                x2 = sensitivity;
+                pX = distance;
             } else if (direction == "right") {
-                pX = -mouseSensitivity;
-                x1 = sensitivity;
+                pX = -distance;
             } else if (direction == "down") {
-                pY = mouseSensitivity;
-                y1 = sensitivity;
+                pY = distance;
             } else if (direction == "up") {
-                pY = -mouseSensitivity;
-                y2 = sensitivity;
+                pY = -distance;
             }
             Path swipePath = new Path();
-            swipePath.moveTo(x1, y1);
-            swipePath.lineTo(x2, y2);
+            swipePath.moveTo(posX, posY);
+            swipePath.lineTo(posX + pX, posY + pY);
 
             GestureDescription.Builder gestureBuilder = new GestureDescription.Builder();
             GestureDescription.StrokeDescription clickStroke = new GestureDescription.StrokeDescription(
