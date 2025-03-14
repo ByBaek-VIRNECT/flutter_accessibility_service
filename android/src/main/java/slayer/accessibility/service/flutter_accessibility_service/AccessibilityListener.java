@@ -124,6 +124,7 @@ public class AccessibilityListener extends AccessibilityService {
         boolean globalAction = intent.getBooleanExtra(INTENT_GLOBAL_ACTION, false);
         boolean systemActions = intent.getBooleanExtra(INTENT_SYSTEM_GLOBAL_ACTIONS, false);
         boolean clickAction = intent.getBooleanExtra(INTENT_CLICK_ACTION, false);
+        boolean swipeAction = intent.getBooleanExtra(INTENT_SWIPE_ACTION, false);
         if (systemActions && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
             Log.d("AccessibilityListener", "systemActions");
             List<Integer> actions = getSystemActions().stream().map(AccessibilityNodeInfo.AccessibilityAction::getId).collect(Collectors.toList());
@@ -137,11 +138,86 @@ public class AccessibilityListener extends AccessibilityService {
             performGlobalAction(actionId);
         }
 
+        if (swipeAction) {
+            Log.d("AccessibilityListener", "swipeAction");
+            int posX = intent.getIntExtra(INTENT_GESTURE_POSITION_X, 0);
+            int posY = intent.getIntExtra(INTENT_GESTURE_POSITION_Y, 0);
+            int gestureId = intent.getIntExtra(INTENT_GESTURE_ID, 0);
+            String direction = intent.getStringExtra(INTENT_SWIPE_DIRECTION);
+            if(direction == null){
+                direction = "left";
+            }
+
+            int pX = 0;
+            int pY = 0;
+
+            float x1 = 500f;
+            float x2 = 500f;
+            float y1 = 500f;
+            float y2 = 500f;
+
+            int mouseSensitivity = 250; // The higher this value, the further the swipe distance
+            float sensitivity = 400f; // The lower this value, the further the swipe distance
+
+            if (direction == "left") {
+                pX = mouseSensitivity;
+                x2 = sensitivity;
+            } else if (direction == "right") {
+                pX = -mouseSensitivity;
+                x1 = sensitivity;
+            } else if (direction == "down") {
+                pY = mouseSensitivity;
+                y1 = sensitivity;
+            } else if (direction == "up") {
+                pY = -mouseSensitivity;
+                y2 = sensitivity;
+            }
+            Path swipePath = new Path();
+            swipePath.moveTo(x1, y1);
+            swipePath.lineTo(x2, y2);
+
+            GestureDescription.Builder gestureBuilder = new GestureDescription.Builder();
+            GestureDescription.StrokeDescription clickStroke = new GestureDescription.StrokeDescription(
+                    swipePath, 10L, 100L
+            );
+            gestureBuilder.addStroke(clickStroke);
+
+            boolean dispatchResult = dispatchGesture(gestureBuilder.build(), new GestureResultCallback() {
+                @Override
+                public void onCompleted(GestureDescription gesture) {
+                    super.onCompleted(gesture);
+                    Log.d("AccessibilityListener", "gesture gesture onCompleted");
+                    Intent broadcastIntent = new Intent(BROD_GESTURE_ACTION_RESULT);
+                    broadcastIntent.putExtra(INTENT_GESTURE_RESULT, true);
+                    broadcastIntent.putExtra(INTENT_GESTURE_ID, gestureId);
+                    sendBroadcast(broadcastIntent);
+                }
+
+                @Override
+                public void onCancelled(GestureDescription gesture) {
+                    super.onCompleted(gesture);
+                    Log.d("AccessibilityListener", "gesture gesture cancelled");
+                    Intent broadcastIntent = new Intent(BROD_GESTURE_ACTION_RESULT);
+                    broadcastIntent.putExtra(INTENT_GESTURE_RESULT, false);
+                    broadcastIntent.putExtra(INTENT_GESTURE_ID, gestureId);
+                    sendBroadcast(broadcastIntent);
+                }
+            }, null);
+            Log.d("AccessibilityListener", "dispatchResult = " + dispatchResult);
+
+            if (!dispatchResult) {
+                Intent broadcastIntent = new Intent(BROD_GESTURE_ACTION_RESULT);
+                broadcastIntent.putExtra(INTENT_GESTURE_RESULT, false);
+                broadcastIntent.putExtra(INTENT_GESTURE_ID, gestureId);
+                sendBroadcast(broadcastIntent);
+            }
+        }
+
         if (clickAction) {
             Log.d("AccessibilityListener", "clickAction");
-            int posX = intent.getIntExtra(INTENT_CLICK_POSITION_X, 0);
-            int posY = intent.getIntExtra(INTENT_CLICK_POSITION_Y, 0);
-            int clickId = intent.getIntExtra(INTENT_CLICK_ID, 0);
+            int posX = intent.getIntExtra(INTENT_GESTURE_POSITION_X, 0);
+            int posY = intent.getIntExtra(INTENT_GESTURE_POSITION_Y, 0);
+            int gestureId = intent.getIntExtra(INTENT_GESTURE_ID, 0);
 
             GestureDescription.Builder gestureBuilder = new GestureDescription.Builder();
             Path clickPath = new Path();
@@ -157,9 +233,9 @@ public class AccessibilityListener extends AccessibilityService {
                 public void onCompleted(GestureDescription gesture) {
                     super.onCompleted(gesture);
                     Log.d("AccessibilityListener", "Click gesture onCompleted");
-                    Intent broadcastIntent = new Intent(BROD_CLICK_ACTION_RESULT);
-                    broadcastIntent.putExtra(INTENT_CLICK_RESULT, true);
-                    broadcastIntent.putExtra(INTENT_CLICK_ID, clickId);
+                    Intent broadcastIntent = new Intent(BROD_GESTURE_ACTION_RESULT);
+                    broadcastIntent.putExtra(INTENT_GESTURE_RESULT, true);
+                    broadcastIntent.putExtra(INTENT_GESTURE_ID, gestureId);
                     sendBroadcast(broadcastIntent);
                 }
 
@@ -167,18 +243,18 @@ public class AccessibilityListener extends AccessibilityService {
                 public void onCancelled(GestureDescription gesture) {
                     super.onCompleted(gesture);
                     Log.d("AccessibilityListener", "Click gesture cancelled");
-                    Intent broadcastIntent = new Intent(BROD_CLICK_ACTION_RESULT);
-                    broadcastIntent.putExtra(INTENT_CLICK_RESULT, false);
-                    broadcastIntent.putExtra(INTENT_CLICK_ID, clickId);
+                    Intent broadcastIntent = new Intent(BROD_GESTURE_ACTION_RESULT);
+                    broadcastIntent.putExtra(INTENT_GESTURE_RESULT, false);
+                    broadcastIntent.putExtra(INTENT_GESTURE_ID, gestureId);
                     sendBroadcast(broadcastIntent);
                 }
             }, null);
             Log.d("AccessibilityListener", "dispatchResult = " + dispatchResult);
 
             if (!dispatchResult) {
-                Intent broadcastIntent = new Intent(BROD_CLICK_ACTION_RESULT);
-                broadcastIntent.putExtra("clickResult", false);
-                broadcastIntent.putExtra(INTENT_CLICK_ID, clickId);
+                Intent broadcastIntent = new Intent(BROD_GESTURE_ACTION_RESULT);
+                broadcastIntent.putExtra(INTENT_GESTURE_RESULT, false);
+                broadcastIntent.putExtra(INTENT_GESTURE_ID, gestureId);
                 sendBroadcast(broadcastIntent);
             }
         }

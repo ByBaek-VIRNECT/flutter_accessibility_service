@@ -57,11 +57,11 @@ public class FlutterAccessibilityServicePlugin implements FlutterPlugin, Activit
     private boolean supportOverlay = false;
 
     private Result pendingResult;
-    HashMap<Integer, Result> pendingClickResultMap = new HashMap<>();
+    HashMap<Integer, Result> pendingGestureResultMap = new HashMap<>();
     final int REQUEST_CODE_FOR_ACCESSIBILITY = 167;
 
     private boolean isActionsReceiverRegistered = false;
-    private boolean isClickActionReceiverRegistered = false;
+    private boolean isGestureActionReceiverRegistered = false;
 
     @Override
     public void onAttachedToEngine(@NonNull FlutterPluginBinding flutterPluginBinding) {
@@ -80,15 +80,15 @@ public class FlutterAccessibilityServicePlugin implements FlutterPlugin, Activit
         }
     };
 
-    private BroadcastReceiver clickActionReceiver = new BroadcastReceiver() {
+    private BroadcastReceiver gestureActionReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            if (intent.hasExtra(INTENT_CLICK_RESULT)) {
-                boolean clickResult = intent.getBooleanExtra(INTENT_CLICK_RESULT, false);
-                int clickId = intent.getIntExtra(INTENT_CLICK_ID, 0);
-                Result pendingClickResult = pendingClickResultMap.get(clickId);
-                if (pendingClickResult != null) {
-                    pendingClickResult.success(clickResult);
+            if (intent.hasExtra(INTENT_GESTURE_RESULT)) {
+                boolean gestureResult = intent.getBooleanExtra(INTENT_GESTURE_RESULT, false);
+                int gestureId = intent.getIntExtra(INTENT_GESTURE_ID, 0);
+                Result pendinggestureResult = pendingGestureResultMap.get(gestureId);
+                if (pendinggestureResult != null) {
+                    pendinggestureResult.success(gestureResult);
                 }
             }
         }
@@ -149,8 +149,8 @@ public class FlutterAccessibilityServicePlugin implements FlutterPlugin, Activit
                 result.success(false);
             }
         } else if (call.method.equals("performClick")) {
-            int posX = call.argument(INTENT_CLICK_POSITION_X);
-            int posY = call.argument(INTENT_CLICK_POSITION_Y);
+            int posX = call.argument(INTENT_GESTURE_POSITION_X);
+            int posY = call.argument(INTENT_GESTURE_POSITION_Y);
 
             Log.d("FlutterAccessibilityServicePlugin", "performClick(posX:" + posX + ", posY:" + posY + ")");
 
@@ -161,24 +161,60 @@ public class FlutterAccessibilityServicePlugin implements FlutterPlugin, Activit
             }
 
             if (Utils.isAccessibilitySettingsOn(context)) {
-                if (!isClickActionReceiverRegistered) {
+                if (!isGestureActionReceiverRegistered) {
                     try {
-                        isClickActionReceiverRegistered = true;
-                        IntentFilter filter = new IntentFilter(BROD_SYSTEM_GLOBAL_ACTIONS);
-                        context.registerReceiver(clickActionReceiver, filter);
+                        isGestureActionReceiverRegistered = true;
+                        IntentFilter filter = new IntentFilter(BROD_GESTURE_ACTION_RESULT);
+                        context.registerReceiver(gestureActionReceiver, filter);
                     } catch (Exception exception) {
-                        isClickActionReceiverRegistered = false;
+                        isGestureActionReceiverRegistered = false;
                         Log.e("ENGINE-ERROR", "performClick: " + exception.getMessage());
                     }
                 }
                 final Intent i = new Intent(context, AccessibilityListener.class);
-                int clickId = pendingClickResultMap.size() + 1;
+                int gestureId = pendingGestureResultMap.size() + 1;
                 i.putExtra(INTENT_CLICK_ACTION, true);
-                i.putExtra(INTENT_CLICK_ID, clickId);
-                i.putExtra(INTENT_CLICK_POSITION_X, posX);
-                i.putExtra(INTENT_CLICK_POSITION_Y, posY);
+                i.putExtra(INTENT_GESTURE_ID, gestureId);
+                i.putExtra(INTENT_GESTURE_POSITION_X, posX);
+                i.putExtra(INTENT_GESTURE_POSITION_Y, posY);
                 context.startService(i);
-                pendingClickResultMap.put(clickId, result);
+                pendingGestureResultMap.put(gestureId, result);
+            } else {
+                result.success(false);
+            }
+        } else if (call.method.equals("performSwipe")) {
+            int posX = call.argument(INTENT_GESTURE_POSITION_X);
+            int posY = call.argument(INTENT_GESTURE_POSITION_Y);
+            String direction = call.argument(INTENT_SWIPE_DIRECTION);
+
+            Log.d("FlutterAccessibilityServicePlugin", "performSwipe(posX:" + posX + ", posY:" + posY + ", direction =" + direction + ")");
+
+            if (posX < 0 || posY < 0) {
+                Log.e("FlutterAccessibilityServicePlugin", "performSwipe invalid position(posX:" + posX + ", posY:" + posY + ")");
+                result.success(false);
+                return;
+            }
+
+            if (Utils.isAccessibilitySettingsOn(context)) {
+                if (!isGestureActionReceiverRegistered) {
+                    try {
+                        isGestureActionReceiverRegistered = true;
+                        IntentFilter filter = new IntentFilter(BROD_GESTURE_ACTION_RESULT);
+                        context.registerReceiver(gestureActionReceiver, filter);
+                    } catch (Exception exception) {
+                        isGestureActionReceiverRegistered = false;
+                        Log.e("ENGINE-ERROR", "performSwipe: " + exception.getMessage());
+                    }
+                }
+                final Intent i = new Intent(context, AccessibilityListener.class);
+                int gestureId = pendingGestureResultMap.size() + 1;
+                i.putExtra(INTENT_SWIPE_ACTION, true);
+                i.putExtra(INTENT_SWIPE_DIRECTION, direction);
+                i.putExtra(INTENT_GESTURE_ID, gestureId);
+                i.putExtra(INTENT_GESTURE_POSITION_X, posX);
+                i.putExtra(INTENT_GESTURE_POSITION_Y, posY);
+                context.startService(i);
+                pendingGestureResultMap.put(gestureId, result);
             } else {
                 result.success(false);
             }
@@ -235,8 +271,8 @@ public class FlutterAccessibilityServicePlugin implements FlutterPlugin, Activit
             if (isActionsReceiverRegistered) {
                 context.unregisterReceiver(actionsReceiver);
             }
-            if (isClickActionReceiverRegistered) {
-                context.unregisterReceiver(clickActionReceiver);
+            if (isGestureActionReceiverRegistered) {
+                context.unregisterReceiver(gestureActionReceiver);
             }
         } catch (Exception exception) {
             Log.e("ENGINE-ERROR", "onDetachedFromEngine: " + exception.getMessage());

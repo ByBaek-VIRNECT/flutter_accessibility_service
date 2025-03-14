@@ -93,6 +93,24 @@ class FlutterAccessibilityService {
     }
   }
 
+  /// performSwipe
+  static Future<bool> performSwipe(int posX, int posY, String direction) async {
+    try {
+      return await _methodChannel.invokeMethod<bool?>(
+        'performSwipe',
+        {
+          "posX": posX,
+          "posY": posY,
+          "direction" : direction
+        },
+      ) ??
+          false;
+    } on PlatformException catch (error) {
+      log("$error");
+      return false;
+    }
+  }
+
   /// Show an overlay window of `TYPE_ACCESSIBILITY_OVERLAY`
   ///
   /// Dont forget to add the overlay entrypoint in the main level.
