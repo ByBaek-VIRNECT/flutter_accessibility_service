@@ -206,8 +206,8 @@ class _MyAppState extends State<MyApp> {
                     TextButton(
                       onPressed: () async {
                         final clickResult =
-                            await FlutterAccessibilityService.performClick(
-                                500, 500);
+                            await FlutterAccessibilityService.performSwipe(
+                                500, 10, "down");
                         log("clickResult = $clickResult");
                       },
                       child: const Text("Perform Click"),

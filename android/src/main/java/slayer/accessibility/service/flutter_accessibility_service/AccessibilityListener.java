@@ -139,7 +139,6 @@ public class AccessibilityListener extends AccessibilityService {
         }
 
         if (swipeAction) {
-            Log.d("AccessibilityListener", "swipeAction");
             int posX = intent.getIntExtra(INTENT_GESTURE_POSITION_X, 0);
             int posY = intent.getIntExtra(INTENT_GESTURE_POSITION_Y, 0);
             int gestureId = intent.getIntExtra(INTENT_GESTURE_ID, 0);
@@ -154,18 +153,19 @@ public class AccessibilityListener extends AccessibilityService {
 
             float distance = 250f; // The higher this value, the further the swipe distance
 
-            if (direction == "left") {
+            if (direction.equals("left")) {
                 pX = distance;
-            } else if (direction == "right") {
+            } else if (direction.equals("right")) {
                 pX = -distance;
-            } else if (direction == "down") {
+            } else if (direction.equals("down")) {
                 pY = distance;
-            } else if (direction == "up") {
+            } else if (direction.equals("up")) {
                 pY = -distance;
             }
             Path swipePath = new Path();
             swipePath.moveTo(posX, posY);
             swipePath.lineTo(posX + pX, posY + pY);
+            Log.d("AccessibilityListener", "swipeAction, posX = " + posX + ", posY = " + posY + "pX = " + pX + "pY = " + pY + ", direction =" + direction);
 
             GestureDescription.Builder gestureBuilder = new GestureDescription.Builder();
             GestureDescription.StrokeDescription clickStroke = new GestureDescription.StrokeDescription(
