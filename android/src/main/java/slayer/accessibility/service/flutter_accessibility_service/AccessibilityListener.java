@@ -154,9 +154,9 @@ public class AccessibilityListener extends AccessibilityService {
             float distance = 250f; // The higher this value, the further the swipe distance
 
             if (direction.equals("left")) {
-                pX = distance;
-            } else if (direction.equals("right")) {
                 pX = -distance;
+            } else if (direction.equals("right")) {
+                pX = distance;
             } else if (direction.equals("down")) {
                 pY = distance;
             } else if (direction.equals("up")) {
