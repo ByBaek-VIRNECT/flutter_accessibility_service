@@ -173,7 +173,7 @@ public class AccessibilityListener extends AccessibilityService {
                 broadcastIntent.putExtra(INTENT_GESTURE_RESULT, false);
                 broadcastIntent.putExtra(INTENT_GESTURE_ID, gestureId);
                 sendBroadcast(broadcastIntent);
-                return;
+                return START_STICKY;
             }
 
             GestureDescription.Builder gestureBuilder = new GestureDescription.Builder();
