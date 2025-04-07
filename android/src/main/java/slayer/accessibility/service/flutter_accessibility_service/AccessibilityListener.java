@@ -164,17 +164,19 @@ public class AccessibilityListener extends AccessibilityService {
             }
             Path swipePath = new Path();
             swipePath.moveTo(posX, posY);
-            swipePath.lineTo(posX + pX, posY + pY);
-            Log.d("AccessibilityListener", "swipeAction, posX = " + posX + ", posY = " + posY + "pX = " + pX + "pY = " + pY + ", direction =" + direction);
+            float movePositionX = posX + pX;
+            float movePositionY = posY + pY;
 
-            if((posX + pX) < 0 || (posY + pY) < 0){
-                Log.w("AccessibilityListener", "Path bounds must not be negative");
-                Intent broadcastIntent = new Intent(BROD_GESTURE_ACTION_RESULT);
-                broadcastIntent.putExtra(INTENT_GESTURE_RESULT, false);
-                broadcastIntent.putExtra(INTENT_GESTURE_ID, gestureId);
-                sendBroadcast(broadcastIntent);
-                return START_STICKY;
+            if(movePositionX < 0){
+                movePositionX = 100;
             }
+
+            if(movePositionY < 0){
+                movePositionY = 100;
+            }
+
+            swipePath.lineTo(movePositionX, movePositionY);
+            Log.d("AccessibilityListener", "swipeAction, posX = " + posX + ", posY = " + posY + "pX = " + pX + "pY = " + pY + ", direction =" + direction);
 
             GestureDescription.Builder gestureBuilder = new GestureDescription.Builder();
             GestureDescription.StrokeDescription clickStroke = new GestureDescription.StrokeDescription(
