@@ -168,10 +168,12 @@ public class AccessibilityListener extends AccessibilityService {
             float movePositionY = posY + pY;
 
             if(movePositionX < 0){
+                Log.w("AccessibilityListener", "Path bounds must not be negative , fixed path x value.");
                 movePositionX = 100;
             }
 
             if(movePositionY < 0){
+                Log.w("AccessibilityListener", "Path bounds must not be negative , fixed path y value.");
                 movePositionY = 100;
             }
 
