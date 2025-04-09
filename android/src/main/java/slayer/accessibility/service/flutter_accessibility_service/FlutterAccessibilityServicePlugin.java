@@ -109,7 +109,11 @@ public class FlutterAccessibilityServicePlugin implements FlutterPlugin, Activit
                     try {
                         isActionsReceiverRegistered = true;
                         IntentFilter filter = new IntentFilter(BROD_SYSTEM_GLOBAL_ACTIONS);
-                        context.registerReceiver(actionsReceiver, filter);
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                            context.registerReceiver(actionsReceiver, filter, Context.RECEIVER_EXPORTED);
+                        } else {
+                            context.registerReceiver(actionsReceiver, filter);
+                        }
                     } catch (Exception exception) {
                         isActionsReceiverRegistered = false;
                         Log.e("ENGINE-ERROR", "getSystemActions: " + exception.getMessage());
@@ -165,7 +169,11 @@ public class FlutterAccessibilityServicePlugin implements FlutterPlugin, Activit
                     try {
                         isGestureActionReceiverRegistered = true;
                         IntentFilter filter = new IntentFilter(BROD_GESTURE_ACTION_RESULT);
-                        context.registerReceiver(gestureActionReceiver, filter);
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                            context.registerReceiver(gestureActionReceiver, filter, Context.RECEIVER_EXPORTED);
+                        } else {
+                            context.registerReceiver(gestureActionReceiver, filter);
+                        }
                     } catch (Exception exception) {
                         isGestureActionReceiverRegistered = false;
                         Log.e("ENGINE-ERROR", "performClick: " + exception.getMessage());
@@ -200,7 +208,11 @@ public class FlutterAccessibilityServicePlugin implements FlutterPlugin, Activit
                     try {
                         isGestureActionReceiverRegistered = true;
                         IntentFilter filter = new IntentFilter(BROD_GESTURE_ACTION_RESULT);
-                        context.registerReceiver(gestureActionReceiver, filter);
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                            context.registerReceiver(gestureActionReceiver, filter, Context.RECEIVER_EXPORTED);
+                        } else {
+                            context.registerReceiver(gestureActionReceiver, filter);
+                        }
                     } catch (Exception exception) {
                         isGestureActionReceiverRegistered = false;
                         Log.e("ENGINE-ERROR", "performSwipe: " + exception.getMessage());
